@@ -4,8 +4,8 @@
 #include <fstream>
 #include <stdio.h>
 #include <setjmp.h>
-
 #include <jpeglib.h>
+#include <iostream>
 
 using namespace std;
 
@@ -77,6 +77,7 @@ bool SaveJPEG(const Path& file, const Image& image) {
 #else
     if ((outfile = fopen(file.string().c_str(), "wb")) == NULL) {
 #endif
+        std::cerr << "Error: file not open" << std::endl;
         return false;
     }
     jpeg_stdio_dest(&cinfo, outfile);
@@ -175,6 +176,7 @@ Image LoadJPEG(const Path& file) {
 #else
     if ((infile = fopen(file.string().c_str(), "rb")) == NULL) {
 #endif
+        std::cerr << "Error: file not open" << std::endl;
         return {};
     }
 

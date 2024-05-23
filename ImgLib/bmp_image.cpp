@@ -4,22 +4,25 @@
 #include <array>
 #include <fstream>
 #include <string_view>
+#include <iostream>
 
 using namespace std;
 
 namespace img_lib {
+    constexpr uint32_t BMP_HEADERS_OFFSET = 54;
+    constexpr uint32_t BMP_HEADER_SIZE = 40;
 
     PACKED_STRUCT_BEGIN BitmapFileHeader{
         // поля заголовка Bitmap File Header
         std::array<char, 2> sign = {'B', 'M'};
         uint32_t header_data_size = 0;          //headers_offset + data; where data = stride * height;
         uint32_t reserved_space = 0;
-        uint32_t headers_offset = 54;           //header1 + header2; (14 + 40 byte from condition)
+        uint32_t headers_offset = BMP_HEADERS_OFFSET;    //header1 + header2; (14 + 40 byte from condition)
     }PACKED_STRUCT_END
 
     PACKED_STRUCT_BEGIN BitmapInfoHeader{
         // поля заголовка Bitmap Info Header
-        uint32_t header_size = 40;      //size of header2 (40 byte from conditon)
+        uint32_t header_size = BMP_HEADER_SIZE;      //size of header2 (40 byte from conditon)
         uint32_t width = 0;
         uint32_t height = 0;
         uint16_t layers = 1;            //one RGB layer
@@ -41,6 +44,10 @@ namespace img_lib {
     // напишите эту функцию
     bool SaveBMP(const Path& file, const Image& image) {    
         ofstream ofs(file, ios::binary);
+        if (!ofs.is_open()) {
+            std::cerr << "Error: file not open" << std::endl;
+            return false;
+        }
         const int width = image.GetWidth();
         const int height = image.GetHeight();
         const int stride = GetBMPStride(width);
@@ -74,16 +81,28 @@ namespace img_lib {
     // напишите эту функцию
     Image LoadBMP(const Path& file) {
         ifstream ifs(file, ios::binary);
+        if (!ifs.is_open()) {
+            std::cerr << "Error: file not open" << std::endl;
+            return {};
+        }
         BitmapFileHeader file_header;
         BitmapInfoHeader info_header;
         ifs.read(reinterpret_cast<char*>(&file_header), sizeof(BitmapFileHeader));
+        if (file_header.headers_offset != BMP_HEADERS_OFFSET) {
+            std::cerr << "Error: reading BitmapFileHeader not correct" << std::endl;
+            return {};
+        }
         ifs.read(reinterpret_cast<char*>(&info_header), sizeof(BitmapInfoHeader));
+        if (info_header.header_size != BMP_HEADER_SIZE) {
+            std::cerr << "Error: reading BitmapInfoHeader not correct" << std::endl;
+            return {};
+        }
 
         const int width = info_header.width;
         const int height = info_header.height;
 		const int stride = GetBMPStride(width);
 
-        Image result(width, height, Color::Black());     //TODO: w
+        Image result(width, height, Color::Black());
 
         std::vector<char> buff(stride);
         for (int y = height - 1; y >= 0; --y) {
